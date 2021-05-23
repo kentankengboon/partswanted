@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "127685850370",
+    "project_id": "partswanted-aa4f7",
+    "storage_bucket": "partswanted-aa4f7.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:127685850370:android:c13ce9a83888e59c44fe1b",
+        "android_client_info": {
+          "package_name": "com.tankengboon.partswanted"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "127685850370-uhpr5cli2hljo1l34g3phglmituddpds.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPxf9YAUS7LsSb8t8EoIqOVyp-J-f0Y3E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "127685850370-uhpr5cli2hljo1l34g3phglmituddpds.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
