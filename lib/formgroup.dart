@@ -35,10 +35,10 @@ class _FormGroupState extends State<FormGroup> {
 
   void initState() {
     super.initState();
-    Firestore.instance.collection("users").document(myEmail).get()
+    FirebaseFirestore.instance.collection("users").doc(myEmail).get()
         .then((value) {
-      if (value.data != null) {
-        if (value.data['tokenId'] != null) {tokenId = value.data['tokenId'];}
+      if (value.data() != null) {
+        if (value['tokenId'] != null) {tokenId = value['tokenId'];}
       }
     });
 
@@ -74,12 +74,12 @@ class _FormGroupState extends State<FormGroup> {
     String memberTokenId;
     findAndWriteToken(memberEmail)async{
       print ("memberemail:  " + memberEmail);
-      await Firestore.instance.collection("users").document(memberEmail).get().then((value) {
-        if (value.data != null) {
-          if (value.data['tokenId'] != null) {memberTokenId = value.data['tokenId'];}
+      await FirebaseFirestore.instance.collection("users").doc(memberEmail).get().then((value) {
+        if (value.data() != null) {
+          if (value['tokenId'] != null) {memberTokenId = value['tokenId'];}
         }
       });
-      Firestore.instance.collection("groups").document(groupId).collection("tokens").document(memberTokenId).setData({"tokenId" : memberTokenId});
+      FirebaseFirestore.instance.collection("groups").doc(groupId).collection("tokens").doc(memberTokenId).set({"tokenId" : memberTokenId});
 
     }
 
@@ -97,21 +97,27 @@ class _FormGroupState extends State<FormGroup> {
         otherEmail[3] = email4.text;
         otherEmail[4] = email5.text;
 
-        await Firestore.instance.collection("users").document(myEmail)
-            .collection("Group").document(groupName.text).get()
+        //print ("groupName:::::::::::::" + groupName.text);
+        //print ("myEmail:::::::::::::" + myEmail);
+        //print ("groupId::::::::::;;" + groupId);
+        await FirebaseFirestore.instance.collection("users").doc(myEmail)
+            .collection("Group").doc(groupName.text).get()
             .then((value) async {
-          //print (value.data);
-          if (value.data == null) {
-            await Firestore.instance.collection("users").document(myEmail)
-                .collection("Group").document(groupName.text)
-                .setData({"groupId": groupId});}
+          //print ("value.data:::::::::::::::" + value.toString());
+          if (value.data() == null) {
+            //print("here:::::::::::::::::");
+            await FirebaseFirestore.instance.collection("users").doc(myEmail)
+                .collection("Group").doc(groupName.text)
+                .set({"groupId": groupId});}
 
-          await Firestore.instance.collection("users").document(myEmail)
-              .collection("Group").document(groupName.text)
-              .updateData({"groupName": groupName.text});
-          await Firestore.instance.collection("users").document(myEmail)
-              .collection("Group").document(groupName.text)
-              .updateData({"image": downloadUrl});
+          await FirebaseFirestore.instance.collection("users").doc(myEmail)
+              .collection("Group").doc(groupName.text)
+              .update({"groupName": groupName.text});
+          await FirebaseFirestore.instance.collection("users").doc(myEmail)
+              .collection("Group").doc(groupName.text)
+              .update({"image": downloadUrl});
+
+
         });
 
         ////////////////////////////////  form the main groups and member data here  /////////////////
@@ -126,51 +132,47 @@ class _FormGroupState extends State<FormGroup> {
           "member1": myEmail,
         };
         int m=1;
-        await Firestore.instance.collection("groups").document(groupId).setData(userMap);
-        if (otherEmail[0] != "") {++m; await Firestore.instance.collection("groups").document(groupId).updateData({"member2" : otherEmail[0]});
+        await FirebaseFirestore.instance.collection("groups").doc(groupId).set(userMap);
+        if (otherEmail[0] != "") {++m; await FirebaseFirestore.instance.collection("groups").doc(groupId).update({"member2" : otherEmail[0]});
         findAndWriteToken(otherEmail[0]);}
-        if (otherEmail[1] != "") {++m; await Firestore.instance.collection("groups").document(groupId).updateData({"member3" : otherEmail[1]});
+        if (otherEmail[1] != "") {++m; await FirebaseFirestore.instance.collection("groups").doc(groupId).update({"member3" : otherEmail[1]});
         findAndWriteToken(otherEmail[1]);}
-        if (otherEmail[2] != "") {++m; await Firestore.instance.collection("groups").document(groupId).updateData({"member4" : otherEmail[2]});
+        if (otherEmail[2] != "") {++m; await FirebaseFirestore.instance.collection("groups").doc(groupId).update({"member4" : otherEmail[2]});
         findAndWriteToken(otherEmail[2]);}
-        if (otherEmail[3] != "") {++m; await Firestore.instance.collection("groups").document(groupId).updateData({"member5" : otherEmail[3]});
+        if (otherEmail[3] != "") {++m; await FirebaseFirestore.instance.collection("groups").doc(groupId).update({"member5" : otherEmail[3]});
         findAndWriteToken(otherEmail[3]);}
-        if (otherEmail[4] != "") {++m; await Firestore.instance.collection("groups").document(groupId).updateData({"member6" : otherEmail[4]});
+        if (otherEmail[4] != "") {++m; await FirebaseFirestore.instance.collection("groups").doc(groupId).update({"member6" : otherEmail[4]});
         findAndWriteToken(otherEmail[4]);}
 
-        Firestore.instance.collection("groups").document(groupId).updateData({"memberCount" : m});
-        Firestore.instance.collection("groups").document(groupId).collection("tokens").document(tokenId).setData({"tokenId" : tokenId});
+        FirebaseFirestore.instance.collection("groups").doc(groupId).update({"memberCount" : m});
+        FirebaseFirestore.instance.collection("groups").doc(groupId).collection("tokens").doc(tokenId).set({"tokenId" : tokenId});
 
         // record this groupName and info to each user data record
         for (int x = 0; x <= 4; x++) {
-          //print("what is the xxxxxxxxxx: " + x.toString());
+          print("what is the xxxxxxxxxx: " + x.toString());
           if (otherEmail[x] != "") {
-            await Firestore.instance.collection("users").document(
+            await FirebaseFirestore.instance.collection("users").doc(
                 otherEmail[x])
-                .collection("Group").document(groupName.text).get()
+                .collection("Group").doc(groupName.text).get()
                 .then((value) async {
               //print (value.data);
-              if (value.data == null) { //can I remove the == null so that it will always update? else how to update latest image?
-                await Firestore.instance.collection("users").document(
-                    otherEmail[x]).collection("Group").document(groupName.text)
-                    .setData({"groupId": groupId});}
+              if (value.data() == null) { //can I remove the == null so that it will always update? else how to update latest image?
+                //print("here;;;;;;;;;;;;;;;;;;");
+                await FirebaseFirestore.instance.collection("users").doc(
+                    otherEmail[x]).collection("Group").doc(groupName.text)
+                    .set({"groupId": groupId});}
 
-              await Firestore.instance.collection("users").document(
-                  otherEmail[x]).collection("Group").document(groupName.text)
-                  .updateData({"groupName": groupName.text});
-              await Firestore.instance.collection("users").document(
-                  otherEmail[x]).collection("Group").document(groupName.text)
-                  .updateData({"image": downloadUrl});
-
+              await FirebaseFirestore.instance.collection("users").doc(
+                  otherEmail[x]).collection("Group").doc(groupName.text)
+                  .update({"groupName": groupName.text});
+              await FirebaseFirestore.instance.collection("users").doc(
+                  otherEmail[x]).collection("Group").doc(groupName.text)
+                  .update({"image": downloadUrl});
             });
           }
         }
-
-
-
       }
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => MainGroup()));
-
     }
 
 
@@ -186,25 +188,25 @@ class _FormGroupState extends State<FormGroup> {
       otherEmail[3] = email4.text;
       otherEmail[4] = email5.text;
 
-      QuerySnapshot qn = await Firestore.instance.collection("users").document(myEmail).collection ("Group").getDocuments();
-      int docLength = qn.documents.length;
+      QuerySnapshot qn = await FirebaseFirestore.instance.collection("users").doc(myEmail).collection ("Group").get();
+      int docLength = qn.size;
       int familyFound = 0;
       int groupIdFound = 0;
       for (int fn = 0; fn <= docLength-1; fn++){
-        if (groupName.text == qn.documents[fn].data['groupName']) {familyFound = 1;}
-        if (myEmail + groupName.text == qn.documents[fn].data['groupId']) {groupIdFound = 1;}
+        if (groupName.text == qn.docs[fn]['groupName']) {familyFound = 1;}
+        if (myEmail + groupName.text == qn.docs[fn]['groupId']) {groupIdFound = 1;}
       }
       if (familyFound == 1){Toast.show("Family task: " + groupName.text + " existed." + "\n" + "Please re-enter family task name.", context, duration: Toast.LENGTH_LONG, gravity: Toast.TOP); noGo = 1;}
       if (groupIdFound == 1){Toast.show("GroupId: " + myEmail + groupName.text + " existed." + "\n" + "Please re-enter family task name.", context, duration: Toast.LENGTH_LONG, gravity: Toast.TOP); noGo = 1;}
 
-      qn = await Firestore.instance.collection("users").getDocuments();
-      docLength = qn.documents.length;
+      qn = await FirebaseFirestore.instance.collection("users").get();
+      docLength = qn.size;
 
       for (int y = 0; y<=4; y++){
         emailFound[y] = 0;
         if (otherEmail[y] != "") {
           for (int x = 0; x <= docLength-1; x++) {
-            if (otherEmail[y] == qn.documents[x].data['email']) {emailFound[y] = 1;}
+            if (otherEmail[y] == qn.docs[x]['email']) {emailFound[y] = 1;}
           }
           if (emailFound[y] == 0){Toast.show(otherEmail[y] + " not found", context, duration: Toast.LENGTH_LONG, gravity: Toast.TOP); noGo = 1;}
         }
@@ -223,7 +225,7 @@ class _FormGroupState extends State<FormGroup> {
       pickedImage = await picker.getImage(source: source);
       print ("here1" +    pickedImage.path);
       if (pickedImage.path == null ){} else {
-        croppedImage = await ImageCropper.cropImage(
+        croppedImage = await ImageCropper().cropImage(
             sourcePath: pickedImage.path,
             aspectRatio: CropAspectRatio(ratioX: 1, ratioY: 1),
             compressQuality: 100,
@@ -250,11 +252,11 @@ class _FormGroupState extends State<FormGroup> {
 
 
     validategroupName()async {
-      QuerySnapshot qn = await Firestore.instance.collection("users").document(myEmail).collection ("Group").getDocuments();
-      int docLength = qn.documents.length;
+      QuerySnapshot qn = await FirebaseFirestore.instance.collection("users").doc(myEmail).collection ("Group").get();
+      int docLength = qn.size;
       int familyFound = 0;
       for (int fn = 0; fn <= docLength-1; fn++){
-        if (groupName.text == qn.documents[fn].data['groupName']) {familyFound = 1;}
+        if (groupName.text == qn.docs[fn]['groupName']) {familyFound = 1;}
       }
       if (familyFound == 1){Toast.show("Family task: " + groupName.text + " existed." + "\n" + "Please re-enter family task name.", context, duration: Toast.LENGTH_LONG, gravity: Toast.TOP);}
       else{captureImage(ImageSource.gallery);}

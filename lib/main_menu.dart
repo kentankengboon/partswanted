@@ -1,10 +1,17 @@
-
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:partswanted/food.dart';
+
 import 'package:toast/toast.dart';
+
+import 'editstall.dart';
+import 'main_group.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class MainMenu extends StatefulWidget {
   final theGroupId;
+  //final theUserStatus;
   MainMenu({this.theGroupId});
 
   @override
@@ -14,9 +21,88 @@ class MainMenu extends StatefulWidget {
 class _MainMenuState extends State<MainMenu> {
 
 
+  FirebaseMessaging _fcm = FirebaseMessaging();
+  String groupIdNotify;
+  String indexNotify;
+  String stallIdNotify;
+  String imageNotify;
+  String stallNotify;
+  String foodNotify;
+  String placeNotify;
+  String qtyNotify;
+  String remarkNotify;
+  String jobRefNoNotify; // added for unIssuedPo purpose
+  String userName = "";
+  String userId;
+
+  void initState(){
+    //print ("at init   " + userStatus);
+    super.initState();
+    //print ("...................at main_menu");
+    userId = FirebaseAuth.instance.currentUser.uid;
+    _fcm.requestNotificationPermissions(); // actually like this works for KW iphone liao
+
+    _fcm.configure(onResume: (Map<String, dynamic> message) async {
+
+      if(Platform.isIOS) {
+        groupIdNotify = message['groupId'].toString();
+        indexNotify = message['index'].toString();
+        stallIdNotify = message['stallId'].toString();
+        imageNotify = message['image'].toString();
+        stallNotify = message['stall'].toString();
+        foodNotify = message['food'].toString();
+        placeNotify = message['place'].toString();
+        qtyNotify = message['qty'].toString();
+        remarkNotify = message['remark'].toString();
+        jobRefNoNotify = message['jobRefNo'].toString(); // added for unIssuedPo purpose
+        notifyToEditStall();
+
+      } else {
+        groupIdNotify = message['data']['groupId'].toString();
+        indexNotify = message['data']['index'].toString();
+        stallIdNotify = message['data']['stallId'].toString();
+        imageNotify = message['data']['image'].toString();
+        stallNotify = message['data']['stall'].toString();
+        foodNotify = message['data']['food'].toString();
+        placeNotify = message['data']['place'].toString();
+        qtyNotify = message['data']['qty'].toString();
+        remarkNotify = message['data']['remark'].toString();
+        jobRefNoNotify = message['jobRefNo'].toString(); // added for unIssuedPo purpose
+        notifyToEditStall();
+        //print ("at Android :" + foodNotify);
+        //print ("at Android :" + imageNotify);
+      }
+    });
+  }
+
+  notifyToEditStall(){
+    // this ken@r-logic.comAll about B2C group IS THE SECRET GROUP. so if notify groupID not from this group (that means for other groupID one, then no issue, go chat space.
+    // if it is about this secret groupID, then cannot go in, unless userId is verified.
+    if (groupIdNotify != "ken@r-logic.comAll about B2C" || userId == "5HQjvArqxmZh5Cnwd7huTalo2bh1" || userId == "5ksQrdScGtRMNibBC9chqXnqbyF2") { // this if is for secret space purpose only
+      // this one and below one more looks like all can. all serve the same purposes.
+      int indexNotifyInt = int.parse(indexNotify); // can't pass index as integer over to here from notification, so must pass String and convert to int
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => EditStall(
+        //Navigator.of(GlobalVariable.navState.currentContext).push(MaterialPageRoute(builder: (context) => EditStall(
+        theGroupId: groupIdNotify,
+        theIndex: indexNotifyInt,
+        theStallDocId: stallIdNotify,
+        theImage: imageNotify, //image
+        theStall: stallNotify, //whatModel
+        theFood: foodNotify, //whatPN
+        thePlace: placeNotify, //whatUse
+        theQty: qtyNotify, //
+        theRemark: remarkNotify, //remark
+        theJobRefNo: jobRefNoNotify, // added for unIssuedPo purpose
+      )));
+    }
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     String groupId = widget.theGroupId;
+    //String userStatus = widget.theUserStatus;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -28,7 +114,8 @@ class _MainMenuState extends State<MainMenu> {
               size: 20,
             ),
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => MainGroup()));
+              //Navigator.pop(context);
             }),
         backgroundColor: Colors.black,
         title: (Text ("Main Menu")),
@@ -74,7 +161,8 @@ class _MainMenuState extends State<MainMenu> {
                             child: Container(
                                 color: Colors.white,
                                 child: GestureDetector (onTap: () {
-                                  Navigator.push(context, MaterialPageRoute(builder: (context) => Food(theGroupId: groupId)));
+                                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Food(theGroupId: groupId)));
+                                  // to fix routing issue, cannot use this >> Navigator.push(context, MaterialPageRoute(builder: (context) => Food(theGroupId: groupId)));
                                 },
                                     child: Image.asset("assets/parts.png",
                                       //fit: BoxFit.fitWidth,
@@ -93,12 +181,6 @@ class _MainMenuState extends State<MainMenu> {
           ),
         ],
       ),
-
-
-
     );
-
-
   }
-
 }

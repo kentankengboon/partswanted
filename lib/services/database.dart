@@ -5,10 +5,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class DatabaseMethods{
+class DatabaseMethods {
 
 
-  writeUserToDatabase (userMap){
+  writeUserToDatabase(userMap) {
+
+/*
     String userId;
     FirebaseAuth.instance.currentUser().then((user) {
       userId = user.uid;
@@ -16,7 +18,13 @@ class DatabaseMethods{
       Firestore.instance.collection("users").document(user.email)
           .setData(userMap);
     });
+
+*/
+
+    String userId;
+    User user = FirebaseAuth.instance.currentUser;
+    userId = FirebaseAuth.instance.currentUser.uid;
+    FirebaseFirestore.instance.collection("users").doc(user.email)
+        .set(userMap);
   }
-
-
 }

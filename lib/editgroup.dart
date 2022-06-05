@@ -54,15 +54,18 @@ class _EditGroupState extends State<EditGroup> {
     var emailFound = List(5);
     //var emailNotFound = List (5);
 
+    User user = FirebaseAuth.instance.currentUser;
+    userId = FirebaseAuth.instance.currentUser.uid;
+    myEmail = user.email;
 
-
-    FirebaseAuth.instance.currentUser().then((user) {
+/* ///// outdated ////////
+    FirebaseAuth.instance.currentUser.then((user) {
       if (user != null) {
         userId = user.uid;
         myEmail = user.email;
       } else {}
     });
-
+*/
 
 
 
@@ -74,19 +77,19 @@ class _EditGroupState extends State<EditGroup> {
       //print("groupid " + groupId);
       //print("myemail " + myEmail);
       //print("groupName: " + groupName);
-      otherEmail[0] = email1.text;
-      otherEmail[1] = email2.text;
-      otherEmail[2] = email3.text;
-      otherEmail[3] = email4.text;
-      otherEmail[4] = email5.text;
+      otherEmail[0] = email1.text.toLowerCase();
+      otherEmail[1] = email2.text.toLowerCase();
+      otherEmail[2] = email3.text.toLowerCase();
+      otherEmail[3] = email4.text.toLowerCase();
+      otherEmail[4] = email5.text.toLowerCase();
 
       // write and attaching group info to users database
-      await Firestore.instance.collection("users").document(myEmail)
-          .collection("Group").document(groupName).get()
+      await FirebaseFirestore.instance.collection("users").doc(myEmail)
+          .collection("Group").doc(groupName).get()
           .then((value) async {
 
 /*      // can never be null for myEmail group record since I am editing it here already, right? so I comment it out, as groupId and groupName will never be changed here
-        if (value.data == null) {
+        if (value.data() == null) {
           await Firestore.instance.collection("users").document(myEmail)
               .collection("Group").document(groupName)
               .setData({"groupId": groupId});}
@@ -96,9 +99,9 @@ class _EditGroupState extends State<EditGroup> {
             .updateData({"groupName": groupName});
 */
 
-        await Firestore.instance.collection("users").document(myEmail)
-            .collection("Group").document(groupName)
-            .updateData({"image": imageUrl});
+        await FirebaseFirestore.instance.collection("users").doc(myEmail)
+            .collection("Group").doc(groupName)
+            .update({"image": imageUrl});
       });
 
 
@@ -112,21 +115,21 @@ class _EditGroupState extends State<EditGroup> {
       // after group info was edited, update all group info (namely image, new member email, memberCount) to Group collection data base
       int memberCount;
       String tokenId;
-      Firestore.instance.collection("groups").document(groupId).get().then((result)async{
-        memberCount = await result.data["memberCount"]; // this is to first determine how many existing member are there in this group
+      FirebaseFirestore.instance.collection("groups").doc(groupId).get().then((result)async{
+        memberCount = await result["memberCount"]; // this is to first determine how many existing member are there in this group
 
         // then knowing the existing mamberCount, one by one find who they are (by email), then update the image change, if indeed changed
         if (change==1) {
           for (int x = 1; x <= memberCount; x++) {
             //print(result.data["member" + x.toString()]);
-            String existingMember = result.data["member" + x.toString()];
+            String existingMember = result["member" + x.toString()];
             // update the image change each to respective users data record
-            await Firestore.instance.collection("users").document(
-                existingMember).collection("Group").document(groupName)
-                .updateData({"image": imageUrl});
+            await FirebaseFirestore.instance.collection("users").doc(
+                existingMember).collection("Group").doc(groupName)
+                .update({"image": imageUrl});
           }
           // also change the image value in the 'groups' data since image has been changed
-          Firestore.instance.collection("groups").document(groupId).updateData({"image": imageUrl});
+          FirebaseFirestore.instance.collection("groups").doc(groupId).update({"image": imageUrl});
         }
         // then also, knowing the memberCount of existing member recorded in 'groups' data, continue to add in new member added here
         int mCount = memberCount;
@@ -137,54 +140,54 @@ class _EditGroupState extends State<EditGroup> {
             int y;
             int existed=0;
             for (y=1; y<= memberCount; y++){
-              if (otherEmail[x] == result.data["member" + y.toString()]) {existed =1;}
+              if (otherEmail[x] == result["member" + y.toString()]) {existed =1;}
               //print ("existed: " + existed.toString());
             }
             if (existed != 1) {
               //update groups member records and the count of member
               // at this point and same time get tokenId of this added member and update to the groups\token collection
-              await Firestore.instance.collection("users").document(otherEmail[x]).get()
+              await FirebaseFirestore.instance.collection("users").doc(otherEmail[x]).get()
                   .then((value) async {
-                if (value.data != null) {
-                  tokenId = await value.data["tokenId"];
+                if (value.data() != null) {
+                  tokenId = await value["tokenId"];
                   ///////////////// write tokenId to groups \ tokens collection/////////////////
-                  await Firestore.instance.collection("groups").document(
-                      groupId).collection("tokens").document(tokenId)
-                      .setData({"tokenId": tokenId});
+                  await FirebaseFirestore.instance.collection("groups").doc(
+                      groupId).collection("tokens").doc(otherEmail[x])
+                      .set({"tokenId": tokenId});
                 }
               });
 
-              mCount++; Firestore.instance.collection("groups").document(groupId).updateData({"member" + mCount.toString(): otherEmail[x]});
+              mCount++; FirebaseFirestore.instance.collection("groups").doc(groupId).update({"member" + mCount.toString(): otherEmail[x]});
 
               // then here update info of this group, which the added member is now attached to, to its own record at users collection: users\email\Group\groupName\[]
               // and here i dont check if record groupName existed in users's Grouop collection. which shouldnt be since on top already check existed !=1
-              await Firestore.instance.collection("users").document(
-                  otherEmail[x]).collection("Group").document(groupName)
-                  .setData({"groupId": groupId});
+              await FirebaseFirestore.instance.collection("users").doc(
+                  otherEmail[x]).collection("Group").doc(groupName)
+                  .set({"groupId": groupId});
 
-              await Firestore.instance.collection("users").document(
-                  otherEmail[x]).collection("Group").document(groupName)
-                  .updateData({"groupName": groupName});
-              await Firestore.instance.collection("users").document(
-                  otherEmail[x]).collection("Group").document(groupName)
-                  .updateData({"image": imageUrl});
+              await FirebaseFirestore.instance.collection("users").doc(
+                  otherEmail[x]).collection("Group").doc(groupName)
+                  .update({"groupName": groupName});
+              await FirebaseFirestore.instance.collection("users").doc(
+                  otherEmail[x]).collection("Group").doc(groupName)
+                  .update({"image": imageUrl});
             }
           }
         }
-        Firestore.instance.collection("groups").document(groupId).updateData({"memberCount": mCount});
+        FirebaseFirestore.instance.collection("groups").doc(groupId).update({"memberCount": mCount});
       });
 
 
       // then here update info of this group, which the added member is now attached to, to its own record at users collection: users\email\Group\groupName\[]
       for (int x = 0; x <= 4; x++) {
         if (otherEmail[x] != "") {
-          await Firestore.instance.collection("users").document(
+          await FirebaseFirestore.instance.collection("users").doc(
               otherEmail[x])
-              .collection("Group").document(groupName).get()
+              .collection("Group").doc(groupName).get()
               .then((value) async {
 
             /* /// shift it up on top
-            if (value.data == null) { //can I remove the == null so that it will always update? else how to update latest image?
+            if (value.data() == null) { //can I remove the == null so that it will always update? else how to update latest image?
               await Firestore.instance.collection("users").document(
                   otherEmail[x]).collection("Group").document(groupName)
                   .setData({"groupId": groupId});
@@ -220,19 +223,19 @@ class _EditGroupState extends State<EditGroup> {
 
     validateEmail()async{
       int noGo=0;
-      otherEmail[0] = email1.text;
-      otherEmail[1] = email2.text;
-      otherEmail[2] = email3.text;
-      otherEmail[3] = email4.text;
-      otherEmail[4] = email5.text;
-      QuerySnapshot qn = await Firestore.instance.collection("users").getDocuments();
-      int docLength = qn.documents.length;
+      otherEmail[0] = email1.text.toLowerCase();
+      otherEmail[1] = email2.text.toLowerCase();
+      otherEmail[2] = email3.text.toLowerCase();
+      otherEmail[3] = email4.text.toLowerCase();
+      otherEmail[4] = email5.text.toLowerCase();
+      QuerySnapshot qn = await FirebaseFirestore.instance.collection("users").get();
+      int docLength = qn.size;
 //print ("doclength: " + docLength.toString());
       for (int y = 0; y<=4; y++){
         emailFound[y] = 0;
         if (otherEmail[y] != "") {
           for (int x = 0; x <= docLength-1; x++) {
-            if (otherEmail[y] == qn.documents[x].data['email']) {emailFound[y] = 1;change =1;}
+            if (otherEmail[y] == qn.docs[x]['email']) {emailFound[y] = 1;change =1;}
           }
           //print ("y: " + y.toString());
           //print ("otherEmail[y]:  " + otherEmail[y]);
@@ -275,25 +278,25 @@ class _EditGroupState extends State<EditGroup> {
       otherEmail[3] = email4.text;
       otherEmail[4] = email5.text;
 
-      QuerySnapshot qn = await Firestore.instance.collection("users").document(myEmail).collection ("Group").getDocuments();
-      int docLength = qn.documents.length;
+      QuerySnapshot qn = await FirebaseFirestore.instance.collection("users").doc(myEmail).collection ("Group").get();
+      int docLength = qn.size;
       int familyFound = 0;
       int groupIdFound = 0;
       for (int fn = 0; fn <= docLength-1; fn++){
-        if (groupName == qn.documents[fn].data['groupName']) {familyFound = 1;}
-        if (myEmail + groupName == qn.documents[fn].data['groupId']) {groupIdFound = 1;}
+        if (groupName == qn.docs[fn]['groupName']) {familyFound = 1;}
+        if (myEmail + groupName == qn.docs[fn]['groupId']) {groupIdFound = 1;}
       }
       if (familyFound == 1){Toast.show("Family task: " + groupName + " existed." + "\n" + "Please re-enter family task name.", context, duration: Toast.LENGTH_LONG, gravity: Toast.TOP); noGo = 1;}
       if (groupIdFound == 1){Toast.show("GroupId: " + myEmail + groupName + " existed." + "\n" + "Please re-enter family task name.", context, duration: Toast.LENGTH_LONG, gravity: Toast.TOP); noGo = 1;}
 
-      qn = await Firestore.instance.collection("users").getDocuments();
-      docLength = qn.documents.length;
+      qn = await FirebaseFirestore.instance.collection("users").get();
+      docLength = qn.size;
 
       for (int y = 0; y<=4; y++){
         emailFound[y] = 0;
         if (otherEmail[y] != "") {
           for (int x = 0; x <= docLength-1; x++) {
-            if (otherEmail[y] == qn.documents[x].data['email']) {emailFound[y] = 1;}
+            if (otherEmail[y] == qn.docs[x]['email']) {emailFound[y] = 1;}
           }
           if (emailFound[y] == 0){Toast.show(otherEmail[y] + " not found", context, duration: Toast.LENGTH_LONG, gravity: Toast.TOP); noGo = 1;}
         }
@@ -311,7 +314,7 @@ class _EditGroupState extends State<EditGroup> {
       //nameEntered = groupName;
       pickedImage = await picker.getImage(source: source);
       if (pickedImage.path == null ){} else {
-        croppedImage = await ImageCropper.cropImage(
+        croppedImage = await ImageCropper().cropImage(
             sourcePath: pickedImage.path,
             aspectRatio: CropAspectRatio(ratioX: 1, ratioY: 1),
             compressQuality: 100,
@@ -324,11 +327,11 @@ class _EditGroupState extends State<EditGroup> {
             ));
       }
       //print ("groupId : " + groupId);
-
       StorageReference firebaseStorageRef = FirebaseStorage.instance.ref().child(groupId);
       StorageUploadTask uploadTask = firebaseStorageRef.putFile(croppedImage);
       StorageTaskSnapshot taskSnapshot = await uploadTask.onComplete;
       imageUrl = await taskSnapshot.ref.getDownloadURL();
+
       change = 1;
       //print ("downloadUrl :" + imageUrl);
       //print ("groupName: " + groupName);
@@ -341,11 +344,11 @@ class _EditGroupState extends State<EditGroup> {
 
 
     validategroupName()async {
-      QuerySnapshot qn = await Firestore.instance.collection("users").document(myEmail).collection ("Group").getDocuments();
-      int docLength = qn.documents.length;
+      QuerySnapshot qn = await FirebaseFirestore.instance.collection("users").doc(myEmail).collection ("Group").get();
+      int docLength = qn.size;
       int familyFound = 0;
       for (int fn = 0; fn <= docLength-1; fn++){
-        if (groupName == qn.documents[fn].data['groupName']) {familyFound = 1;}
+        if (groupName == qn.docs[fn]['groupName']) {familyFound = 1;}
       }
       if (familyFound == 1){Toast.show("Family task: " + groupName + " existed." + "\n" + "Please re-enter family task name.", context, duration: Toast.LENGTH_LONG, gravity: Toast.TOP);}
       else{captureImage(ImageSource.gallery);}
@@ -438,10 +441,10 @@ class _EditGroupState extends State<EditGroup> {
                 SizedBox(width: 90),
                 ClipRRect(
                     child:
-                    //imageUrl != null?
+                    imageUrl != "" ?
                     Image.network(imageUrl, width: 200, height: 200, //fit: BoxFit.fill
                     )
-                    //:Image.asset("assets/groupIcon.jpg")
+                    : Image.asset("assets/groupIcon.png", width: 250, height: 250,)
                     ,
                     borderRadius: BorderRadius.circular(30)
                 ),
@@ -592,16 +595,15 @@ class _EditGroupState extends State<EditGroup> {
                   flex: 2,
                   child: Padding(
                     padding: const EdgeInsets.only(right: 15.0),
-                    child: FlatButton(
-                      //child: TextButton(
-                      onPressed: () {
-                        //validate(); ////////////////////////////////////////// wait need to at least validate email existed
-                        validateEmail();
-                        //setupFamilyGroup();
-                      },//{if (buttonTapped == false) {uploadStallInfo();}},
-                      //style: TextButton.styleFrom(primary: Colors.blue,),
-                      color: Colors.blue,
-                      shape: RoundedRectangleBorder(borderRadius: new BorderRadius.circular(30.0)),
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        //primary: Colors.black,
+                        backgroundColor: Colors.blue,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(30.0)),
+                        ),
+                      ),
+                      onPressed: () {validateEmail();},
                       child: Text(
                         "ok",
                         style: TextStyle(
@@ -620,3 +622,4 @@ class _EditGroupState extends State<EditGroup> {
           ]),
         ));
   }}
+

@@ -1,7 +1,7 @@
-class User {
+class projectUser {
   String userId;
   String userEmail;
   String userName;
-  User ({this.userId, this.userEmail, this.userName});
+  projectUser  ({this.userId, this.userEmail, this.userName});
 //User ({this.userId});
 }

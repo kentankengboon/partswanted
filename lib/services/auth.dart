@@ -5,17 +5,17 @@ class AuthMethods {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // condition ? True : False
-  User _userFromFirebaseUser(FirebaseUser user) {
+  projectUser _userFromFirebaseUser(User user) {
     return user != null
-        ? User(userId: user.uid)
+        ? projectUser(userId: user.uid)
         : null; // this simply put the value FirebaseUser's UID to userId as established in user.dart, right?
   }
 
   Future signInWithEmailAndPassword(String email, String password) async {
     try {
-      AuthResult result = await _auth.signInWithEmailAndPassword
+      UserCredential result = await _auth.signInWithEmailAndPassword
         (email: email, password: password);
-      FirebaseUser firebaseUser = result.user;
+      User firebaseUser = result.user;
       return _userFromFirebaseUser(firebaseUser);
     } catch (e) {
       print(e.toString());
@@ -24,9 +24,9 @@ class AuthMethods {
 
   Future signUpWithEmailAndPassword(String email, String password) async {
     try {
-      AuthResult result = await _auth.createUserWithEmailAndPassword
+      UserCredential result = await _auth.createUserWithEmailAndPassword
         (email: email, password: password);
-      FirebaseUser firebaseUser = result.user;
+      User firebaseUser = result.user;
       return _userFromFirebaseUser(firebaseUser);
     } catch (e) {
       print(e.toString());
@@ -38,4 +38,12 @@ class AuthMethods {
       return await _auth.signOut();
     } catch (e) {}
   }
+
+
+  Future sendPasswordResetEmail (String email) async {
+    //print ("authMethod here");
+    try { return await _auth.sendPasswordResetEmail (email: email);
+    } catch (e) {}
+  }
+
 }

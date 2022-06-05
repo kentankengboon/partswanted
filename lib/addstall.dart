@@ -28,6 +28,8 @@ class AddStall extends StatefulWidget {
 class _AddStallState extends State<AddStall> {
   String groupId;
   String userName;
+  String userEmail;
+
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +38,8 @@ class _AddStallState extends State<AddStall> {
     TextEditingController inputWhatFood = new TextEditingController();
     TextEditingController inputWhatQty = new TextEditingController();
     TextEditingController inputRemark = new TextEditingController();
+    TextEditingController inputCustomer = new TextEditingController();
+    TextEditingController inputTgtPrice = new TextEditingController();
 
     File theImage = widget.croppedImage;
     groupId = widget.theGroupId;
@@ -43,28 +47,45 @@ class _AddStallState extends State<AddStall> {
 
     String userId;
     String stallId;
+    //String timeStamp;
     double latitudeData;
     double longitudeData;
     int rating = 1;
     bool buttonTapped = false;
+    //  attempt //
+    String dropdownValue;
 
     //File croppedImage;
     //final picker = ImagePicker();
 
+    userId = FirebaseAuth.instance.currentUser.uid;
+    if (userId != null) {
+      FirebaseFirestore.instance.collection("users").where("userId", isEqualTo: userId).get().then((result){
+        if (result.docs.isNotEmpty){
+          //print ("here?>>>>>>>>>>>>>>.");
+          result.docs.forEach((record) {userName = record["name"];userEmail = record["email"];});
+          //print ("userName:::::::::: " + userName);
+        }
+      });
 
+
+      //result.documents.forEach((record) { userName = record.data["name"];});
+//print ("userName:::::::::: " + userName);
+      //Toast.show("here: " + userName, context, duration: Toast.LENGTH_LONG, gravity: Toast.BOTTOM);
+      //Toast.show(" not found", context, duration: Toast.LENGTH_LONG, gravity: Toast.TOP);
+      //Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => TeamPage()));
+    } else {
+      //print (user.uid);
+      //Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Register()));
+    }
+/*
     FirebaseAuth.instance.currentUser().then((user) async{
       //setState(() {
       if (user != null) {
         userId = user.uid;
-
-
         var result = await Firestore.instance.collection("users") .where("userId", isEqualTo: userId) .getDocuments();
         result.documents.forEach((record) { userName = record.data["name"];
         });
-
-
-
-
         Toast.show("here: " + userName, context, duration: Toast.LENGTH_LONG, gravity: Toast.BOTTOM);
         //Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => TeamPage()));
       } else {
@@ -73,7 +94,7 @@ class _AddStallState extends State<AddStall> {
       }
       //});
     });
-
+*/
     Future uploadStallInfo() async {
       //var image = await picker.getImage(source: source);
       //File compressedImage = await picker.getImage(source: ImageSource.camera, imageQuality: 85);
@@ -98,19 +119,29 @@ class _AddStallState extends State<AddStall> {
       buttonTapped = true;
 
       //print ("tapped 2 ?" + buttonTapped.toString());
+      var downloadUrl;
+      var downloadUrl0;
+      DateTime now = DateTime.now();
+      //stallId = userEmail + now.toString();
+      String formattedDate = DateFormat('yyyy-MM-dd' + '  ' + 'HH:mm').format(now);
+      String idDate = DateFormat('yyyyMMddHHmmss').format(now);
+      stallId = idDate + userEmail;
+//print ("stallIdnew: " + stallId);
 
-      stallId = userId + DateTime.now().toString(); // todo: stallID with model number
+
+
       StorageReference firebaseStorageRef =
       //FirebaseStorage.instance.ref().child(userId);
-      FirebaseStorage.instance.ref().child(stallId);
+      FirebaseStorage.instance.ref().child(stallId + "/" + userEmail + "/" +  stallId +"_0");
       StorageUploadTask uploadTask = firebaseStorageRef.putFile(theImage);
       StorageTaskSnapshot taskSnapshot = await uploadTask.onComplete;
-      var downloadUrl = await taskSnapshot.ref.getDownloadURL();
+      downloadUrl = await taskSnapshot.ref.getDownloadURL();
 
-      firebaseStorageRef = FirebaseStorage.instance.ref().child(stallId + "0");
+      firebaseStorageRef = FirebaseStorage.instance.ref().child(stallId + "/" + userEmail + "/"  + stallId+"_1");
       uploadTask = firebaseStorageRef.putFile(theImage);
       taskSnapshot = await uploadTask.onComplete;
-      var downloadUrl0 = await taskSnapshot.ref.getDownloadURL();
+      downloadUrl0 = await taskSnapshot.ref.getDownloadURL();
+
 
 /*
       final geoposition = await Geolocator().getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
@@ -120,12 +151,12 @@ class _AddStallState extends State<AddStall> {
       var addresses = await Geocoder.local.findAddressesFromCoordinates(coordinates);
       String addr2 = addresses.first.addressLine;
 */
-      DateTime now = DateTime.now();
-      String formattedDate = DateFormat('yyyy-MM-dd – kk:mm').format(now);
-      Map<String, String> userMap = {
+
+
+      Map<String, dynamic> userMap = {
 
         "image": downloadUrl,
-        "whoupload": userName,
+        "whoupload": userEmail,
         "whatUse": inputWhere.text,
         "whatModel": inputWhatStall.text,
         "whatPN": inputWhatFood.text,
@@ -135,30 +166,48 @@ class _AddStallState extends State<AddStall> {
         "remark": inputRemark.text,
         //result = DateTime.Now.Date.ToString("yyyy.MM.dd | HH:mm:ss | ")
         "whenAsk": formattedDate,
-        "whouploadId": userId,
-        "archive" : formattedDate,
+        "whouploadId": userEmail,
+        "since" : formattedDate,
+        "customer": inputCustomer.text,
+        "tgtPrice": inputTgtPrice.text,
+        "stallId": stallId,
+        "quotes": "",
+        "poUploaded": "",
+        "poStatus": ""
+        //"msgIncoming" : 0 // <<<<<<<< no need liao, and go remove all msgIncoming at firestore bah
+        // >>>>>>>>>> instead must have all members email and set up mail box state = 0 here
         //"whenAsk": DateTime.now().toString("yyyy.MM.dd | HH:mm:ss | ")
       };
 
-      await Firestore.instance
+      await FirebaseFirestore.instance
           .collection(groupId)
-          .document(stallId)
-          .setData(userMap);
+          .doc(stallId)
+          .set(userMap);
 
-      await Firestore.instance
+      await FirebaseFirestore.instance
           .collection(groupId)
-          .document(stallId)
-          .updateData({"rating": rating});
+          .doc(stallId)
+          .update({"rating": rating});
 
-      await Firestore.instance
+      await FirebaseFirestore.instance
           .collection(groupId)
-          .document(stallId).collection("pictures").document(stallId + "0")
-          .setData({"image": downloadUrl0});
+          .doc(stallId).collection("pictures").doc(stallId + "0")
+          .set({"image": downloadUrl0});
 
-      await Firestore.instance
+      await FirebaseFirestore.instance
           .collection(groupId)
-          .document(stallId).collection("messages").document("messages")
-          .setData({"messages": "request starts on " + formattedDate});
+          .doc(stallId).collection("messages").doc("messages")
+          .set({"messages": "request starts on  " + formattedDate});
+
+      await FirebaseFirestore.instance
+          .collection(groupId)
+          .doc(stallId).collection("messages").doc("messages")
+          .update({"dateStamp": DateFormat.yMMMd().format(now)});
+      await FirebaseFirestore.instance
+          .collection(groupId)
+          .doc(stallId).collection("messages").doc("messages")
+          //.update({"timeStamp": DateFormat('hh:mm').format(DateTime.now())});
+          .update({"timeStamp": now});
 
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Food(theGroupId: groupId,)));
 
@@ -169,26 +218,47 @@ class _AddStallState extends State<AddStall> {
       //setState(() {userImageUrl = downloadUrl; Navigator.push(context, MaterialPageRoute(builder: (context) => Users()));});
 
     }
-
-
     //File croppedImage;
+
+
+
+    //    attempt  ///
+    void overflowSelected(String choice) {
+      //if (choice == OverflowBtn.courtsClick) {
+        //Toast.show("Here ", context, duration: Toast.LENGTH_LONG, gravity: Toast.BOTTOM);
+        inputCustomer.text = choice;
+
+      //}
+    }
 
     return Scaffold(
         resizeToAvoidBottomInset: true,
         appBar: AppBar(
-          title: (Text("Add Stall")),
+
+          leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios,
+                size: 20,
+              ),
+              onPressed: () {
+                //print ("userStatus:  " + userStatus);
+                //Navigator.pop(context); //to fix routing issue, cannot use this else might show blank page if there isnt a previous widget standby in place. hence not working for Notification jumping to EditStall situation
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Food(theGroupId: groupId,)));
+              }),
+          title: (Text("Add Part")),
         ),
+
         body: SingleChildScrollView(
           reverse: true,
           child: Column(children: [
             Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: Container(
-                  height: 300,
-                  width: 400,
+                  height: 200,
+                  width: 200,
                   child: ClipRRect(
-                      borderRadius: BorderRadius.circular(30.0),
-                      child: Image.file(theImage, fit: BoxFit.fill)),
+                      borderRadius: BorderRadius.circular(20.0),
+                      child: Image.file(theImage, width: 200, height: 200,)), //fit: BoxFit.fill)),
                 )),
             //SizedBox (height: 5),
 
@@ -207,6 +277,8 @@ class _AddStallState extends State<AddStall> {
                 ),
               ),
             ),
+
+
 
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
@@ -279,6 +351,98 @@ class _AddStallState extends State<AddStall> {
               ),
             ),
 
+/*
+//    attempt  ///
+        DropdownButton<String>(
+              value: dropdownValue,
+              icon: const Icon(Icons.arrow_downward),
+              iconSize: 24,
+              elevation: 16,
+              style: const TextStyle(color: Colors.deepPurple),
+              underline: Container(
+              height: 2,
+              color: Colors.deepPurpleAccent,
+              ),
+              onChanged: (String newValue) {
+              setState(() {
+              dropdownValue = newValue;
+              });
+              },
+              items: <String>['One', 'Two', 'Free', 'Four']
+                  .map<DropdownMenuItem<String>>((String value) {
+              return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+              );
+              }).toList(),
+              ),
+*/
+
+
+
+
+            Row(
+              children: [
+                Expanded(flex:7,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                    child: TextField(
+                      style:
+                      TextStyle(fontStyle: FontStyle.italic, color: Colors.blue),
+                      controller: inputCustomer,
+                      keyboardType: TextInputType.multiline,
+                      maxLength: null,
+                      maxLines: null,
+                      decoration: InputDecoration(
+                        hintText: "customer (if applicable)",
+                        hintStyle: TextStyle(
+                            fontSize: 15,
+                            color: Colors.grey[400],
+                            fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  ),
+                ),
+
+                //    attempt  ///
+                Expanded(flex:1,
+                  child: PopupMenuButton<String>(
+                    onSelected: overflowSelected,
+                    itemBuilder: (BuildContext context) {
+                      return OverflowBtn.choices.map((String choice) {
+                        return PopupMenuItem<String>(
+                          value: choice,
+                          child: Text(choice),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
+
+              ],
+            ),
+
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+              child: TextField(
+                style:
+                TextStyle(fontStyle: FontStyle.italic, color: Colors.blue),
+                controller: inputTgtPrice,
+                keyboardType: TextInputType.multiline,
+                maxLength: null,
+                maxLines: null,
+                decoration: InputDecoration(
+                  hintText: "Tgt Price (if applicable)",
+                  hintStyle: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey[400],
+                      fontStyle: FontStyle.italic),
+                ),
+              ),
+            ),
+
+
+
             SizedBox(height: 20),
 
             Row(
@@ -290,7 +454,7 @@ class _AddStallState extends State<AddStall> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20,0,0,0),
                     child: GestureDetector(
-                      onTap: (){Toast.show("He likes it too !!!", context,
+                      onTap: (){Toast.show("Please click ok when done", context,
                           duration: Toast.LENGTH_LONG, gravity: Toast.BOTTOM);},
                       child: Text(
                         "reserved button",
@@ -316,12 +480,15 @@ class _AddStallState extends State<AddStall> {
                   flex: 2,
                   child: Padding(
                     padding: const EdgeInsets.only(right: 15.0),
-                    child: FlatButton(
-                      //child: TextButton(
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        //primary: Colors.black,
+                        backgroundColor: Colors.blue,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(30.0)),
+                        ),
+                      ),
                       onPressed: () {if (buttonTapped == false) {uploadStallInfo();}},
-                      //style: TextButton.styleFrom(primary: Colors.blue,),
-                      color: Colors.blue,
-                      shape: RoundedRectangleBorder(borderRadius: new BorderRadius.circular(30.0)),
                       child: Text(
                         "ok",
                         style: TextStyle(
@@ -338,4 +505,17 @@ class _AddStallState extends State<AddStall> {
           ]),
         ));
   }
+}
+
+//    attempt  ///
+class OverflowBtn{
+  static const String courtsClick ='Courts';
+  static const String harveyNormanClick ='Harvey Norman';
+  static const String asusClick ='Asus';
+  static const String b2cClick ='B2C';
+  static const String archiveClick ='Archived';
+
+  static const List <String> choices = <String> [
+    courtsClick, harveyNormanClick , asusClick, b2cClick, archiveClick];
+
 }

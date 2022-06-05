@@ -11,6 +11,7 @@ import 'package:focused_menu/modals.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:partswanted/viewpicture.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:toast/toast.dart';
 //import 'package:image_picker/image_picker.dart';
 //import 'package:network_to_file_image/network_to_file_image.dart';
@@ -21,6 +22,7 @@ import 'package:toast/toast.dart';
 class Pictures extends StatefulWidget {
   final theIndex;
   final theStallId;
+  final theStallIdNo;
   final theStall;
   final theFood;
   final thePlace;
@@ -28,15 +30,19 @@ class Pictures extends StatefulWidget {
   final theAddress;
   final theImage;
   final theGroupId;
-  Pictures({this.theIndex, this.theStallId, this.theImage, this.theStall, this.theFood, this.thePlace, this.theRemark, this.theAddress, this.theGroupId});
+  Pictures({this.theIndex, this.theStallId, this.theStallIdNo, this.theImage, this.theStall, this.theFood, this.thePlace, this.theRemark, this.theAddress, this.theGroupId});
 
   @override
-  _PicturesState createState() => _PicturesState();
+  _PicturesState createState() => _PicturesState(stallIdNo: theStallIdNo);
 }
 
 class _PicturesState extends State<Pictures> {
+
+
+
   int index;
   String stallId;
+  String stallIdNo;
   String stall;
   String food;
   String place;
@@ -44,29 +50,96 @@ class _PicturesState extends State<Pictures> {
   String address;
   String image;
   String groupId;
-
-  var imageUrl = List (20);
+  //List breakupMsg = [];
+  List imageUrl = [];
+  //var imageUrl = List (20);
   //List imageUrl = List.empty(growable:true);
   //List imageUrl = List.filled(20, "dd");
   //var imageUrl = [];
 
   int docLength;
-  int getPicDone;
+  int docLengthMore;
+  //int getPicDone;
   int picIndex;
+  //int docStart=0;
+  //int addOrDel=0;
+  int triggered=0;
+  String myEmail;
+
+  _PicturesState({this.stallIdNo});
+
+  void initState() {
+    super.initState();
+
+    //User user = FirebaseAuth.instance.currentUser;
+    //userId = FirebaseAuth.instance.currentUser.uid;
+    myEmail = FirebaseAuth.instance.currentUser.email;
+  }
 
   getPictures() async {
-    QuerySnapshot qn = await Firestore.instance.collection(groupId).document(stallId).collection("pictures").getDocuments();
-    docLength = qn.documents.length;
-    //print ("doclength: " + docLength.toString());
-    //nextPicIndex = docLength;
+    if (triggered !=1) {
+    QuerySnapshot qn = await FirebaseFirestore.instance.collection(groupId).doc(stallId).collection("pictures").get();
+    docLength = qn.docs.length;
     int x;
     for (x=0; x< docLength ; x++) {
-      imageUrl [x] = await qn.documents[x].data['image'];
-      //print (x.toString() + "   " + imageUrl [x]);
+      imageUrl.add(await qn.docs[x]['image']);
     }
-    imageUrl [docLength] = null;
-    if (getPicDone!=1) {setState(() {}); getPicDone = 1;}
+
+    QuerySnapshot qnMore = await FirebaseFirestore.instance.collection(groupId).doc(stallId).collection("morePictures").get();
+    docLengthMore = qnMore.docs.length;
+    int y;
+    for (y=0; y< docLengthMore ; y++) {
+      imageUrl.add(await qnMore.docs[y]['image']);
+    }
+
+
+    setState(() {triggered = 1;});
+
     //print (stallId);
+  }
+
+  }
+
+
+
+  File croppedImage;
+  final picker = ImagePicker();
+  var pickedImage;
+  var downloadUrl;
+  String pictureId;
+  String picAdded = "N";
+
+  Future captureImage(ImageSource source) async {
+    pickedImage = await picker.getImage(source: source);
+    if (pickedImage.path == null ){} else {
+      croppedImage = await ImageCropper().cropImage(
+          sourcePath: pickedImage.path,
+          aspectRatio: CropAspectRatio(ratioX: 1, ratioY: 1),
+          compressQuality: 100,
+          maxWidth: 800,
+          maxHeight: 800,
+          compressFormat: ImageCompressFormat.jpg,
+          androidUiSettings: AndroidUiSettings(
+            toolbarColor: Colors.blue,
+            toolbarTitle: "Crop it",
+          ));
+    }
+
+    pictureId = myEmail + DateTime.now().toString();
+
+    StorageReference firebaseStorageRef =
+    //FirebaseStorage.instance.ref().child(pictureId); /// put to folder email > stallId > email + DateTime.noe().toString()_add
+    FirebaseStorage.instance.ref().child(stallIdNo + "/" + myEmail + "/" +  pictureId);
+    StorageUploadTask uploadTask = firebaseStorageRef.putFile(croppedImage);
+    StorageTaskSnapshot taskSnapshot = await uploadTask.onComplete;
+    downloadUrl = await taskSnapshot.ref.getDownloadURL();
+
+    await FirebaseFirestore.instance.collection(groupId).doc(stallId).collection("pictures").doc(pictureId).set({"image": downloadUrl});
+    //docStart = docLength;
+    docLength ++;
+    imageUrl.add(downloadUrl);
+    picAdded = "Y";
+    setState(() {});
   }
 
   @override
@@ -82,72 +155,24 @@ class _PicturesState extends State<Pictures> {
     //image = widget.theImage;
     groupId = widget.theGroupId;
 
-/*
-    String userId;
-    FirebaseAuth.instance.currentUser().then((user) {
-      if (user != null) {
-        userId = user.uid;
-      } else {}
-    });
-*/
     getPictures();
 
-    File croppedImage;
-    final picker = ImagePicker();
-    var pickedImage;
-    var downloadUrl;
-    String pictureId;
-    Future captureImage(ImageSource source) async {
-      pickedImage = await picker.getImage(source: source);
-      if (pickedImage.path == null ){} else {
-        croppedImage = await ImageCropper.cropImage(
-            sourcePath: pickedImage.path,
-            aspectRatio: CropAspectRatio(ratioX: 1, ratioY: 1),
-            compressQuality: 100,
-            maxWidth: 800,
-            maxHeight: 800,
-            compressFormat: ImageCompressFormat.jpg,
-            androidUiSettings: AndroidUiSettings(
-              toolbarColor: Colors.blue,
-              toolbarTitle: "Crop it",
-            ));
-      }
-
-      pictureId = stallId + DateTime.now().toString();
-      StorageReference firebaseStorageRef =
-      FirebaseStorage.instance.ref().child(pictureId);
-      StorageUploadTask uploadTask = firebaseStorageRef.putFile(croppedImage);
-      StorageTaskSnapshot taskSnapshot = await uploadTask.onComplete;
-      downloadUrl = await taskSnapshot.ref.getDownloadURL();
-      await Firestore.instance.collection(groupId).document(stallId).collection("pictures").document(pictureId).setData({"image": downloadUrl});
-      docLength ++;
-      getPicDone = 0;
-      setState(() {});
-    }
-
-/*
-    removePic() async {
-      QuerySnapshot qn = await Firestore.instance.collection("FoodStall").document(stallId).collection("pictures").getDocuments();
-
-      Firestore.instance
-          .collection("FoodStall").document(stallId).collection("pictures").where("image", isEqualTo: imageUrl[picIndex]) .getDocuments()
-          .then((value) {
-        value.documents.forEach((result) async{
-          await Firestore.instance.collection("FoodStall").document(stallId).collection("pictures")
-              .document(result.documentID).delete();
-          print(result.documentID);
-        }); });
-
-      StorageReference firebaseStorageRef = await FirebaseStorage.instance.getReferenceFromUrl(imageUrl[picIndex]);
-      await firebaseStorageRef.delete();
-      getPicDone = 0;
-      setState(() {});
-    }
-*/
     return Scaffold(
         backgroundColor: Colors.black,
         appBar: AppBar(
-          title: (Text("Memories")),
+
+          leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios,
+                size: 20,
+              ),
+              onPressed: () {
+                //picAdded == "Y" ?
+                Navigator.pop(context, picAdded);
+                    //: Navigator.pop(context);
+              }),
+
+          title: (Text("Pictures")),
           backgroundColor: Colors.black,
           actions: [
             GestureDetector(
@@ -171,9 +196,9 @@ class _PicturesState extends State<Pictures> {
         Column(
           children: [
             SizedBox(height:10),
-            Expanded(flex:1, child: Text (stall, style: TextStyle(color: Colors.white,)),),
-            Expanded(flex:1, child: Text (food, style: TextStyle(color: Colors.white)),),
-            Expanded(flex:1, child: Divider(color: Colors.grey)),
+            Text (stall, textAlign: TextAlign.center, style: TextStyle(color: Colors.white,)),
+            Text (food, textAlign: TextAlign.center, style: TextStyle(color: Colors.white)),
+            Divider(color: Colors.grey),
             Expanded(
               flex: 30,
               child: GridView.count(
@@ -182,132 +207,30 @@ class _PicturesState extends State<Pictures> {
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
                 crossAxisCount: 2,
-
                 children: imageUrl.map((imageUrl) => buildCard((context), imageUrl)).toList(),
-
-/*
-              children: <Widget>[
-                GestureDetector(
-                  onTap: (){picIndex =0; removePic();},
-                  child: Container(
-                    child: imageUrl[0] != null ? Image.network(imageUrl[0],fit: BoxFit.fill):null
-                  ),
-                ),
-                GestureDetector(
-                  onTap: (){picIndex =1; removePic();},
-                  child: Container(
-                      child: imageUrl[1] != null ? Image.network(imageUrl[1],fit: BoxFit.fill):null
-                  ),
-                ),
-                GestureDetector(
-                  onTap: (){picIndex =2; removePic();},
-                  child: Container(
-                      child: imageUrl[2] != null ? Image.network(imageUrl[2],fit: BoxFit.fill):null
-                  ),
-                ),
-                GestureDetector(
-                  onTap: (){picIndex =3; removePic();},
-                  child: Container(
-                      child: imageUrl[3] != null ? Image.network(imageUrl[3],fit: BoxFit.fill):null
-                  ),
-                ),
-                GestureDetector(
-                  onTap: (){picIndex =4; removePic();},
-                  child: Container(
-                      child: imageUrl[4] != null ? Image.network(imageUrl[4],fit: BoxFit.fill):null
-                  ),
-                ),
-                GestureDetector(
-                  onTap: (){picIndex =5; removePic();},
-                  child: Container(
-                      child: imageUrl[5] != null ? Image.network(imageUrl[5],fit: BoxFit.fill):null
-                  ),
-                ),
-                GestureDetector(
-                  onTap: (){picIndex =6; removePic();},
-                  child: Container(
-                      child: imageUrl[6] != null ? Image.network(imageUrl[6],fit: BoxFit.fill):null
-                  ),
-                ),
-                GestureDetector(
-                  onTap: (){picIndex =7; removePic();},
-                  child: Container(
-                      child: imageUrl[7] != null ? Image.network(imageUrl[7],fit: BoxFit.fill):null
-                  ),
-                ),
-                GestureDetector(
-                  onTap: (){picIndex =8; removePic();},
-                  child: Container(
-                      child: imageUrl[8] != null ? Image.network(imageUrl[8],fit: BoxFit.fill):null
-                  ),
-                ),
-                GestureDetector(
-                  onTap: (){picIndex =9; removePic();},
-                  child: Container(
-                      child: imageUrl[9] != null ? Image.network(imageUrl[9],fit: BoxFit.fill):null
-                  ),
-                ),
-              ],
-*/
-
               ),
             ),
           ],
         )
-
-/* ///////////////// A template for list view //////////////
-      Column(
-          children: [
-          SizedBox(height: 20),
-          Text(stall, style: TextStyle(color: Colors.white)),
-          Text(food, style: TextStyle(color: Colors.white)),
-          Divider(color: Colors.grey),
-
-          FutureBuilder(
-            future: getPictures(),
-            builder: (_, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(child: Text("Loading..."),);
-              } else {
-            SizedBox(height: 100);
-            return ListView.builder(
-                itemCount: snapshot.data.length,
-                itemBuilder: (_, index) {
-
-                  return ListTile();
-
-                });
-
-
-              }
-
-
-            })
-
-          ]
-
-      )
-*/
-
     );
   }
 
   removePic(urlClicked) async {
     //QuerySnapshot qn = await Firestore.instance.collection("FoodStall").document(stallId).collection("pictures").getDocuments();
     //print("here: " + urlClicked);
-
-    Firestore.instance
-        .collection(groupId).document(stallId).collection("pictures").where("image", isEqualTo: urlClicked) .getDocuments()
+    FirebaseFirestore.instance
+        .collection(groupId).doc(stallId).collection("pictures").where("image", isEqualTo: urlClicked) .get()
         .then((value) {
-      value.documents.forEach((result) async{
-        await Firestore.instance.collection(groupId).document(stallId).collection("pictures")
-            .document(result.documentID).delete();
+      value.docs.forEach((result) async{
+        result.reference.delete();
+        //await FirebaseFirestore.instance.collection(groupId).doc(stallId).collection("pictures").doc(result.documentID).delete();
         //print(result.documentID);
       }); });
 
     StorageReference firebaseStorageRef = await FirebaseStorage.instance.getReferenceFromUrl(urlClicked);
     await firebaseStorageRef.delete();
-    getPicDone = 0;
+    imageUrl.remove(urlClicked);
+    //getPicDone = 0;
     setState(() {});
   }
 
@@ -333,3 +256,4 @@ class _PicturesState extends State<Pictures> {
     ),
   );
 }
+
