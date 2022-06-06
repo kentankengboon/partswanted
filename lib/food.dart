@@ -22,6 +22,7 @@ import 'package:scroll_to_index/scroll_to_index.dart';
 import 'package:toast/toast.dart';
 
 import 'addstall.dart';
+import 'chart.dart';
 import 'editstall.dart';
 import 'main_group.dart';
 import 'main_menu.dart';
@@ -35,12 +36,15 @@ class Food extends StatefulWidget {
   final theStallIndex;
   final thePreviousSort;
   final theSpecialChnPassword; //added for YQ
+  //final theCustomerIs;
+  //final theChartingFor;
   //final theUserStatus;
   Food({this.thePageTitle, this.theGroupId, this.theStallIndex, this.thePreviousSort, this.theSpecialChnPassword}); //added the SpecialPasswrod for YQ
-
+  //Food({this.thePageTitle, this.theGroupId, this.theStallIndex, this.thePreviousSort, this.theSpecialChnPassword, this.theCustomerIs, this.theChartingFor}); //added the SpecialPasswrod for YQ
 
   @override
   _FoodState createState() => _FoodState(pageTitle: thePageTitle, groupId: theGroupId, stallIndex: theStallIndex, previousSort: thePreviousSort, specialChnPassword: theSpecialChnPassword);//added the SpecialPasswrod for YQ
+  //_FoodState createState() => _FoodState(pageTitle: thePageTitle, groupId: theGroupId, stallIndex: theStallIndex, previousSort: thePreviousSort, specialChnPassword: theSpecialChnPassword, customerIs: theCustomerIs, chartingFor: theChartingFor);//added the SpecialPasswrod for YQ
 }
 
 class _FoodState extends State<Food> {
@@ -51,10 +55,12 @@ class _FoodState extends State<Food> {
   int docLength;
   String specialChnPassword; //added for YQ
   String customerPick;
+  //String customerIs;
+  String chartingFor;
   //String addNew = "";
   //final userStatus;
   _FoodState({this.pageTitle, this.groupId, this.stallIndex, this.previousSort, this.specialChnPassword}); // added specialPasswrod for YQ
-
+  //_FoodState({this.pageTitle, this.groupId, this.stallIndex, this.previousSort, this.specialChnPassword, this.customerIs, this.chartingFor}); // added specialPasswrod for YQ
 
 // todo: added with mobile cannot go to the last white PN
 // todo: also -2 seems to have null problem?
@@ -108,6 +114,12 @@ class _FoodState extends State<Food> {
 //print("here at init:");
     //print ("...................at food");
     //print ("stallIndex at food: " + stallIndex.toString());
+//if(customerIs != null){print("customerIs: " + customerIs);}
+//if(chartingFor != null){print("chartingfor: " + chartingFor);}
+
+
+    ///// if (customerIs == "Lenovo" && chartingFor == "toQuote"){customerPick = customerIs; getToQuote();} //// put where????
+
     if (specialChnPassword == "tebieguandao"){userId = "IWvhdoNgkCdXltByrveXP2lvypE2"; myEmail = "req@gmail.com";userStatus = "Rlogic";}else { //"If" added for YQ
       User user = FirebaseAuth.instance.currentUser;
       userId = FirebaseAuth.instance.currentUser.uid;
@@ -536,6 +548,7 @@ class _FoodState extends State<Food> {
   }
 
   getToQuote()async {
+    //print ("atToQuote: " + customerPick);
     //QuerySnapshot qn = await FirebaseFirestore.instance.collection(groupId).where("stage", isEqualTo: 1).get();
     //QuerySnapshot qn = await FirebaseFirestore.instance.collection(groupId).where('condCode', arrayContains: '1ARN').get();
     //var currentSnap = FirebaseFirestore.instance.collection(groupId).where('condCode', arrayContains: '1ARN');
@@ -544,8 +557,8 @@ class _FoodState extends State<Food> {
     await whatPartGotMail(currentSnap);setState(() {});
     docLength = qn.size;
     //print(customerPick);
-
-    writeDataToChart(docLength, 'toQuote');
+    chartingFor = 'toQuote';
+    writeDataForChart(docLength, customerPick, 'toQuote', 'latestQuoteDate', 'latestQuoteQty');
     return qn.docs;
   }
 
@@ -555,6 +568,8 @@ class _FoodState extends State<Food> {
     var currentSnap = FirebaseFirestore.instance.collection(groupId).where('customer', isEqualTo: customerPick).where('condCode', arrayContains: '2ARN');
     await whatPartGotMail(currentSnap);setState(() {});
     docLength = qn.size;
+    chartingFor = 'toPo';
+    writeDataForChart(docLength, customerPick, 'toPo', 'latestPoDate', 'latestPoQty');
     return qn.docs;
   }
 
@@ -576,29 +591,33 @@ class _FoodState extends State<Food> {
     return qn.docs;
   }
 
-  writeDataToChart(docLength, statusToCheck) async {
+  writeDataForChart(docLength, customerPick, statusToCheck, fieldNameLatestDate, fieldNameLatestQty) async {
     var latestDate;
-    print ("Here " + statusToCheck + "  " + docLength.toString());
-
-    FirebaseFirestore.instance.collection('charts').doc(statusToCheck).update({"latestQty": docLength});
+    //print ("Here " + statusToCheck + "  " + docLength.toString());
+//print("customerPick: " + customerPick);
+    FirebaseFirestore.instance.collection('charts').doc(customerPick).update({fieldNameLatestQty: docLength});
     //FirebaseFirestore.instance.collection('charts').doc(statusToCheck).update({"latestDate": DateTime.now()});
+
+
     await FirebaseFirestore.instance.collection('charts')
-        .doc(statusToCheck)
+        .doc(customerPick)
         .get()
         .then((value) async {
-      if (value.data()['latestDate'] != null) {
-        latestDate = value['latestDate'];
-        print (latestDate);
-        print (DateTime.now());
+      if (value.data()[fieldNameLatestDate] != null) {
+        latestDate = value[fieldNameLatestDate];
+        //print (latestDate);
+        //print (DateTime.now());
         final difference = DateTime.now().difference(DateTime.parse(latestDate.toDate().toString())).inDays;
-        print ("difference :" + difference.toString());
+        //print ("difference :" + difference.toString());
         if (difference >0) {
           Map<String, dynamic> chtMap = {"date": DateFormat.yMMMd().format(DateTime.now()), "qty": docLength, "color": "0xff109618"};
           FirebaseFirestore.instance
               .collection('charts')
-              .doc(statusToCheck).collection(statusToCheck).doc(DateTime.now().toString())
+              .doc(customerPick).collection(statusToCheck).doc(DateTime.now().toString())
               .set(chtMap);
-          FirebaseFirestore.instance.collection('charts').doc(statusToCheck).update({"latestDate": DateTime.now()});
+
+          //FirebaseFirestore.instance.collection('charts').doc(customerPick).update({"latestDate": DateTime.now()});
+          FirebaseFirestore.instance.collection('charts').doc(customerPick).update({fieldNameLatestDate: DateTime(DateTime.now().year,DateTime.now().month, DateTime.now().day)});
         } // write new set of chart data and update the latestDate
 
         //if(DateTime.parse(latestDate.toDate().toString()).compareTo(DateTime.now()) < 0){print("yes  latest before now");}
@@ -962,12 +981,13 @@ class _FoodState extends State<Food> {
 
             GestureDetector(
                 onTap: () {
-                  poRecords();
+                  //Navigator.push(context, MaterialPageRoute(builder: (context) => Chart(theGroupId: groupId)));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => Chart(theGroupId: groupId, theCustomerPick: customerPick, theChartingFor: chartingFor)));
                   //forDebug(); ///////////////////////////////////
                 },
                 child: Padding(
                   padding: const EdgeInsets.only(right: 20.0),
-                  child: Icon(Icons.check),
+                  child: Icon(Icons.insert_chart),
                 )):Text(""),
 
 
@@ -1030,6 +1050,8 @@ class _FoodState extends State<Food> {
                     child: Text("Loading...",style: TextStyle(color: Colors.white, fontSize: 15)),
                   );
                 } else {
+                  //if (customerIs == "Lenovo" && chartingFor == "toQuote"){customerPick = customerIs; getToQuote();}
+                  //else {print("xxx");}
                   //SizedBox(height: 100);
                   return ListView.builder(
                     //return IndexedListView.builder(

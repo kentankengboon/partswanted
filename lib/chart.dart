@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 //import 'package:flutter_chart_json/chartmap.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 import 'chartmap.dart';
+import 'food.dart';
 
 
 class Chart extends StatefulWidget {
@@ -11,21 +12,27 @@ class Chart extends StatefulWidget {
   //final theSupplier;
   //Chart({this.theYear, this.theRev, this.theColor});
 
+  final theGroupId;
+  final theCustomerPick;
+  final theChartingFor;
+  Chart({this.theGroupId, this.theCustomerPick, this.theChartingFor});
+
   //@override
   //_ChartState createState() => _ChartState(year:theYear, rev:theRev, color:theColor);
-  _ChartState createState() => _ChartState();
+  _ChartState createState() => _ChartState(groupId: theGroupId, customerPick: theCustomerPick, chartingFor: theChartingFor);
 }
 
 class _ChartState extends State<Chart> {
-  //String groupId;
+  String groupId;
+  String customerPick;
+  String chartingFor;
   //String userName;
   //String userEmail;
   //final year;
   //final int rev;
   //String color;
+  _ChartState({this.groupId, this. customerPick, this.chartingFor});
 
-
-  //_ChartState({this.year, this.rev, this.color});
   List<charts.Series<ChartMap, String>> _seriesBarData = [];
   List <ChartMap> myData = [];
   _generateData (myData) {
@@ -40,13 +47,27 @@ class _ChartState extends State<Chart> {
   }
 
   Widget build(BuildContext context){
-    return Scaffold(appBar: AppBar(title: Text('Chart Value'),),
-    body: _buildBody (context),);
+    return Scaffold(appBar:
+      AppBar(
+        leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back_ios,
+              size: 20,
+            ),
+            onPressed: () {
+              //picAdded == "Y" ?
+              // print ("groupId " + groupId);
+              //: Navigator.pop(context);
+              //Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Food(theGroupId: groupId, theCustomerIs: customerPick, theChartingFor: chartingFor)));
+               Navigator.pop(context);
+            }),
+        title: Text('Chart Value'),),
+      body: _buildBody (context),);
   }
 
   Widget _buildBody (context){
     return StreamBuilder<QuerySnapshot>(
-      stream: Firestore.instance.collection ('charts').document('toQuote').collection('toQuote').snapshots(),
+      stream: Firestore.instance.collection ('charts').document(customerPick).collection(chartingFor).snapshots(),
       builder: (context,snapshot){
         if(!snapshot.hasData){
           //print("here no");
@@ -66,12 +87,12 @@ class _ChartState extends State<Chart> {
     myData = chartValue;
     _generateData(myData);
     return Padding(
-      padding: EdgeInsets.all(8.0),
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 40),
       child: Container(
         child: Center(
           child: Column(
             children: <Widget>[
-              Text('Pending',
+              Text(chartingFor,
               style: TextStyle(fontSize:24.0, fontWeight: FontWeight.bold),),
               SizedBox(height: 10.0),
 
